@@ -1,0 +1,72 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #0b0b0d;
+  --color-spade: #111827;
+  --color-heart: #dc2626;
+  --color-diamond: #2563eb;
+  --color-club: #15803d;
+  --color-line: #06c755;
+
+  --animate-sheet-up: sheet-up 160ms ease-out;
+  --animate-toast: toast 1.8s ease-out forwards;
+
+  @keyframes sheet-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes toast {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -8px);
+    }
+    10%,
+    80% {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: #f4f4f5;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  padding-top: env(safe-area-inset-top);
+  font-family:
+    system-ui,
+    -apple-system,
+    'PingFang TC',
+    'Noto Sans TC',
+    'Microsoft JhengHei',
+    sans-serif;
+}
+
+/* 避免雙擊放大；touch-action 不會繼承，所以每個元素都要設 */
+* {
+  touch-action: manipulation;
+}
+
+button,
+a {
+  user-select: none;
+  -webkit-user-select: none;
+}
