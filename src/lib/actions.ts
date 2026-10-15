@@ -2,23 +2,38 @@ import { postflopOrder, type Position } from './positions'
 
 export type ActionType = 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allin'
 
+export type Street = 0 | 1 | 2 | 3
+export type PostflopStreet = 1 | 2 | 3
+export const STREET_NAMES = ['翻前', '翻牌', '轉牌', '河牌'] as const
+
 /**
- * 存進資料庫的一個行動。
+ * 一個人的行動。
  * `to`：下注 / 加注 / 全下「加到多少」（這條街的總額，單位 bb）；不知道就是 null。
  * 蓋牌、過牌、跟注不用填。`auto` 是「點後面的位置」時自動補上的蓋牌。
  */
-export interface Action {
+export interface SeatAction {
   seat: Position
   type: ActionType
   to: number | null
   auto?: boolean
 }
 
-export type Street = 0 | 1 | 2 | 3
-export const STREET_NAMES = ['翻前', '翻牌', '轉牌', '河牌'] as const
+/** 前面的街沒記完，直接從這條街開始記；`live` 是還在牌局裡的人 */
+export interface StreetJump {
+  type: 'street'
+  street: PostflopStreet
+  live: Position[]
+}
+
+/** 存進資料庫的行動列表，依時間順序 */
+export type Action = SeatAction | StreetJump
+
+export const isSeatAction = (a: Action): a is SeatAction => a.type !== 'street'
 
 /** 重播後加上說明的行動 */
-export interface PlayedAction extends Action {
+export interface PlayedAction extends SeatAction {
+  /** 在 hand.actions 裡的位置，編輯用 */
+  index: number
   street: Street
   /** 開、3bet、跛入、跟、過牌、蓋牌、下注、加注到、全下 */
   label: string
@@ -30,7 +45,7 @@ export interface PlayedAction extends Action {
 
 export interface StreetLog {
   street: Street
-  /** 這條街開始時的底池；有不知道的金額就是 null */
+  /** 這條街開始時的底池；有不知道的金額（或前面的街沒記）就是 null */
   potStart: number | null
   actions: PlayedAction[]
 }
@@ -59,6 +74,8 @@ export interface Replay {
   done: boolean
   /** 結束時還有兩個人以上（攤牌，或全下後發完公牌） */
   showdown: boolean
+  /** 第一個接不上的行動（改了前面的行動之後可能發生）；都接得上是 null */
+  invalidAt: number | null
 }
 
 const add = (a: number | null, b: number | null) => (a === null || b === null ? null : a + b)
@@ -66,7 +83,7 @@ const add = (a: number | null, b: number | null) => (a === null || b === null ? 
 /**
  * 依序重播這手的行動，算出每條街、底池、輪到誰。
  * `seats` 是翻前行動順序；`ante` 是死錢（大盲前注 1bb）。
- * 不合規則的行動（不是輪到的人）直接略過。
+ * 接不上的行動（不是輪到的人、已經結束）會略過，並記在 `invalidAt`。
  */
 export function replay(seats: readonly Position[], actions: readonly Action[], ante: number): Replay {
   let street: Street = 0
@@ -87,6 +104,7 @@ export function replay(seats: readonly Position[], actions: readonly Action[], a
   const streets: StreetLog[] = [{ street: 0, potStart: pot, actions: [] }]
   let done = false
   let showdown = false
+  let invalidAt: number | null = null
 
   /** 加注後，除了自己以外還沒蓋牌、還沒全下的人都要再行動 */
   const reopen = (actor: Position) => {
@@ -100,8 +118,39 @@ export function replay(seats: readonly Position[], actions: readonly Action[], a
     contributed.set(seat, to)
   }
 
-  for (const action of actions) {
-    if (done || action.seat !== needToAct[0]) continue
+  const startStreet = (next: PostflopStreet, potStart: number | null) => {
+    street = next
+    order = postflopOrder(seats)
+    contributed = new Map()
+    matched = new Map()
+    betLevel = 0
+    facing = 0
+    pot = potStart
+    needToAct = order.filter((p) => live.has(p) && !allIn.has(p))
+    streets.push({ street, potStart, actions: [] })
+  }
+
+  actions.forEach((action, index) => {
+    if (invalidAt !== null) return
+
+    if (!isSeatAction(action)) {
+      const players = action.live.filter((p) => seats.includes(p))
+      if (done || action.street <= street || players.length < 2) {
+        invalidAt = index
+        return
+      }
+      live.clear()
+      players.forEach((p) => live.add(p))
+      allIn.clear()
+      startStreet(action.street, null)
+      return
+    }
+
+    if (done || action.seat !== needToAct[0]) {
+      invalidAt = index
+      return
+    }
+
     const { seat } = action
     let label = ''
     let amount: number | null = null
@@ -155,32 +204,25 @@ export function replay(seats: readonly Position[], actions: readonly Action[], a
       }
     }
 
-    streets[streets.length - 1].actions.push({ ...action, street, label, amount, shown })
+    streets[streets.length - 1].actions.push({ ...action, index, street, label, amount, shown })
     if (raised) reopen(seat)
     else needToAct = needToAct.slice(1)
 
     if (live.size === 1) {
       done = true
-      break
+      return
     }
-    if (needToAct.length > 0) continue
+    if (needToAct.length > 0) return
 
     // 這條街結束
     const canBet = [...live].filter((p) => !allIn.has(p))
     if (street === 3 || canBet.length <= 1) {
       done = true
       showdown = true
-      break
+      return
     }
-    street = (street + 1) as Street
-    order = postflopOrder(seats)
-    contributed = new Map()
-    matched = new Map()
-    betLevel = 0
-    facing = 0
-    needToAct = order.filter((p) => live.has(p) && !allIn.has(p))
-    streets.push({ street, potStart: pot, actions: [] })
-  }
+    startStreet((street + 1) as PostflopStreet, pot)
+  })
 
   const toAct = done ? null : (needToAct[0] ?? null)
   return {
@@ -198,20 +240,21 @@ export function replay(seats: readonly Position[], actions: readonly Action[], a
     contributed: Object.fromEntries(contributed),
     done,
     showdown,
+    invalidAt,
   }
 }
 
 /** 復原：拿掉最後一個行動；如果是自動補的蓋牌，就把連在一起的自動蓋牌一起拿掉 */
 export function undoLast(actions: readonly Action[]): Action[] {
   if (actions.length === 0) return []
-  const last = actions[actions.length - 1]
+  const isAuto = (a: Action) => isSeatAction(a) && a.auto === true
   let end = actions.length - 1
-  if (last.auto) while (end > 0 && actions[end - 1].auto) end--
+  if (isAuto(actions[end])) while (end > 0 && isAuto(actions[end - 1])) end--
   return actions.slice(0, end)
 }
 
 /** 點後面的位置：中間還要行動的人都補一個自動蓋牌 */
-export function foldsUntil(state: Replay, seat: Position): Action[] {
+export function foldsUntil(state: Replay, seat: Position): SeatAction[] {
   const i = state.needToAct.indexOf(seat)
   if (i <= 0) return []
   return state.needToAct.slice(0, i).map((p) => ({ seat: p, type: 'fold', to: null, auto: true }))

@@ -161,3 +161,39 @@ describe('suggestedSizes', () => {
     expect(suggestedSizes(replay(NINE, [...PREFLOP_3BET, bet('CO', 5)], 1)).map((s) => s.value)).toEqual([12.5, 15, 20])
   })
 })
+
+describe('從後面的街開始記', () => {
+  it('翻前沒記完，直接從翻牌開始：指定還在牌局的人，底池不知道', () => {
+    const s = replay(NINE, [fold('UTG'), { type: 'street', street: 1, live: ['CO', 'BTN'] }], 1)
+    expect(s.street).toBe(1)
+    expect(s.live).toEqual(['CO', 'BTN'])
+    expect(s.toAct).toBe('CO')
+    expect(s.streets[1].potStart).toBeNull()
+    expect(s.invalidAt).toBeNull()
+  })
+
+  it('不能跳回目前或之前的街，人數要兩個以上', () => {
+    expect(replay(NINE, [{ type: 'street', street: 1, live: ['CO'] }], 1).invalidAt).toBe(0)
+    expect(replay(NINE, [...PREFLOP_3BET, { type: 'street', street: 1, live: ['CO', 'BTN'] }], 1).invalidAt).toBe(10)
+  })
+
+  it('復原可以拿掉跳街', () => {
+    const jump: Action = { type: 'street', street: 2, live: ['SB', 'BB'] }
+    expect(undoLast([fold('UTG'), jump])).toEqual([fold('UTG')])
+  })
+})
+
+describe('invalidAt / index', () => {
+  it('改了前面的行動，後面接不上的會標出來', () => {
+    // 原本 CO 跟，改成 CO 蓋牌 → 這手結束，後面的翻牌行動接不上
+    const edited = [...PREFLOP_3BET.slice(0, 9), fold('CO'), check('CO')]
+    const s = replay(NINE, edited, 1)
+    expect(s.done).toBe(true)
+    expect(s.invalidAt).toBe(10)
+  })
+
+  it('每個行動帶著它在列表裡的位置', () => {
+    const s = replay(NINE, PREFLOP_3BET, 1)
+    expect(s.streets[0].actions.find((a) => a.seat === 'BTN')?.index).toBe(6)
+  })
+})

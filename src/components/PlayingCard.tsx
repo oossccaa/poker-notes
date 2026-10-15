@@ -3,46 +3,53 @@ import { SUIT_COLOR, SuitIcon } from './SuitIcon'
 
 const cardLabel = (card: Card) => `${SUIT_NAME[suitOf(card)]} ${rankOf(card)}`
 
-/** 一手牌頁的牌格。空的就是虛線框 */
+const SIZES = {
+  lg: { box: 'h-[76px] w-[54px]', rank: 'text-[26px]', suit: 'size-6' },
+  md: { box: 'h-[60px] w-[44px]', rank: 'text-[22px]', suit: 'size-5' },
+}
+
+/** 可以點的牌格。空的就是虛線框 */
 export function CardSlot({
   card,
   active = false,
+  size = 'lg',
   label,
   onClick,
 }: {
   card: Slot
   active?: boolean
+  size?: keyof typeof SIZES
   label: string
   onClick: () => void
 }) {
-  const ring = active ? 'ring-3 ring-amber-400 ring-offset-2 ring-offset-ink' : ''
+  const s = SIZES[size]
+  const ring = active ? 'ring-3 ring-amber-400 ring-offset-2 ring-offset-zinc-900' : ''
   if (!card) {
     return (
       <button
         type="button"
         onClick={onClick}
         aria-label={`${label}：空`}
-        className={`h-[76px] w-[54px] shrink-0 rounded-lg border-2 border-dashed border-zinc-700 text-2xl text-zinc-600 active:bg-zinc-900 ${ring}`}
+        className={`${s.box} shrink-0 rounded-lg border-2 border-dashed border-zinc-600 text-xl text-zinc-500 active:bg-zinc-800 ${ring}`}
       >
         +
       </button>
     )
   }
-  const color = SUIT_COLOR[suitOf(card)]
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={`${label}：${cardLabel(card)}`}
-      className={`flex h-[76px] w-[54px] shrink-0 flex-col items-center justify-center gap-1 rounded-lg bg-stone-100 shadow active:brightness-90 ${color} ${ring}`}
+      className={`flex ${s.box} shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg bg-stone-100 shadow active:brightness-90 ${SUIT_COLOR[suitOf(card)]} ${ring}`}
     >
-      <span className="text-[26px] leading-none font-bold">{rankOf(card)}</span>
-      <SuitIcon suit={suitOf(card)} className="size-6" />
+      <span className={`${s.rank} leading-none font-bold`}>{rankOf(card)}</span>
+      <SuitIcon suit={suitOf(card)} className={s.suit} />
     </button>
   )
 }
 
-/** 列表裡的小牌 */
+/** 列表、摘要裡的小牌 */
 export function MiniCard({ card }: { card: Card }) {
   return (
     <span

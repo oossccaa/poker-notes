@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Action } from './actions'
+import type { Position } from './positions'
 import { blankHand, type Hand } from './hand'
 import { buildShareText, lineShareUrl } from './shareText'
 
 const hand = (patch: Partial<Hand>): Hand => ({ ...blankHand('h1', 0), ...patch })
 
-const fold = (seat: Action['seat'], auto = false): Action => ({ seat, type: 'fold', to: null, ...(auto ? { auto } : {}) })
+const fold = (seat: Position, auto = false): Action => ({ seat, type: 'fold', to: null, ...(auto ? { auto } : {}) })
 
 /** CO 開、Hero(BTN) 3bet、CO 跟；翻牌 CO 過、Hero 下注、CO 跟；轉牌 CO 過、Hero 全下、CO 蓋 */
 const ACTIONS: Action[] = [

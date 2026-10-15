@@ -35,16 +35,17 @@ pnpm icons        # 由 public/icon.svg 重新產生 PNG icon
 
 ```
 src/
-  pages/        HandList（列表）、HandPage（一手牌）
-  components/   CardPicker、NumPad、PositionPicker、PlayingCard、Sheet…
-  db/           Dexie schema 與存取函式
-  lib/          純函式：cards、format、shareText、id、clipboard
+  pages/        HandList（列表）、HandPage（一手牌：步驟列 + 摘要 + 輸入區）
+  components/   StepBar、HandSummary、CardKeyboard、ActionPad、NumberPad、PositionPicker、PlayingCard…
+  db/           Dexie schema、存取函式、useHandEditor（即時存檔）
+  lib/          純函式：actions（行動規則、重播）、steps（步驟狀態與自動往下）、cards、hand、format、shareText…
 docs/SPEC.md    完整規格
 ```
 
 ## 開發習慣
 
 - `src/lib/` 的純函式都要有 Vitest 測試。
+- 行動只存原始順序，輪到誰、底池、每條街的分段都由 `replay()` 算，不要另外存。
 - UI 改動要在 375×667（iPhone SE）和 390×844 看過。
 - `crypto.randomUUID()`、Clipboard API 在非 HTTPS（手機連區網 IP）不能用，已有替代做法（`lib/id.ts`、`lib/clipboard.ts`），不要直接呼叫。
 - 真機測試：iPhone Safari（加到主畫面後）+ Android Chrome。
