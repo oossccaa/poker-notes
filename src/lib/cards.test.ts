@@ -67,5 +67,8 @@ describe('cards', () => {
     expect(nextEmptySlot(['As', 'Kd', 'Qc', null, null, null, null], 0)).toBe(3)
     expect(nextEmptySlot(['As', 'Kd', 'Qc', 'Jh', 'Ts', '9s', '8s'], 2)).toBeNull()
     expect(nextEmptySlot([null, null, null, null, null, null, null], 6)).toBeNull()
+    // 只填到 until 為止
+    expect(nextEmptySlot(['As', null, null, null, null, null, null], 1, 1)).toBeNull()
+    expect(nextEmptySlot(['As', 'Kd', 'Qc', null, null, null, null], 2, 4)).toBe(3)
   })
 })

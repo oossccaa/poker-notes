@@ -1,16 +1,18 @@
-import { POSITIONS, type Position } from '../lib/positions'
+import type { Position } from '../lib/positions'
 
-/** 9 顆位置按鈕；再點一次已選的 = 取消 */
+/** 這桌的位置按鈕；再點一次已選的 = 取消 */
 export function PositionPicker({
+  positions,
   value,
   onChange,
 }: {
+  positions: readonly Position[]
   value: Position | null
   onChange: (value: Position | null) => void
 }) {
   return (
     <div className="grid grid-cols-5 gap-1.5">
-      {POSITIONS.map((p) => {
+      {positions.map((p) => {
         const selected = p === value
         return (
           <button

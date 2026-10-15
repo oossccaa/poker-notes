@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { formatBb } from '../lib/format'
-import { parseValue, pressKey, type NumKey } from '../lib/numpad'
-
-const KEYS: NumKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back']
+import { parseValue, pressKey } from '../lib/numpad'
+import { KEY_CLASS, Keypad } from './Keypad'
 
 /**
  * bb 數字鍵盤，不叫出系統鍵盤。
@@ -26,8 +25,6 @@ export function NumPad({
 
   const confirm = (sign: 1 | -1) => onConfirm(value === null ? null : value * sign || 0)
 
-  const key = 'h-12 rounded-lg text-[22px] font-semibold active:brightness-125'
-
   return (
     <>
       <div className="fixed inset-0 z-30 bg-black/50" onClick={onCancel} aria-hidden="true" />
@@ -44,35 +41,23 @@ export function NumPad({
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5">
-          {KEYS.map((k) => (
-            <button
-              key={k}
-              type="button"
-              aria-label={k === 'back' ? '倒退' : k}
-              onClick={() => setText((t) => pressKey(t, k))}
-              className={`${key} bg-zinc-700`}
-            >
-              {k === 'back' ? '⌫' : k}
-            </button>
-          ))}
-        </div>
+        <Keypad onKey={(k) => setText((t) => pressKey(t, k))} />
 
         <div className="mt-2 grid grid-cols-3 gap-1.5">
-          <button type="button" onClick={() => onConfirm(null)} className={`${key} bg-zinc-800 text-base text-zinc-300`}>
+          <button type="button" onClick={() => onConfirm(null)} className={`${KEY_CLASS} bg-zinc-800 text-base text-zinc-300`}>
             清除
           </button>
           {mode === 'result' ? (
             <>
-              <button type="button" onClick={() => confirm(-1)} className={`${key} bg-red-600 text-white`}>
+              <button type="button" onClick={() => confirm(-1)} className={`${KEY_CLASS} bg-red-600 text-white`}>
                 輸 −
               </button>
-              <button type="button" onClick={() => confirm(1)} className={`${key} bg-emerald-600 text-white`}>
+              <button type="button" onClick={() => confirm(1)} className={`${KEY_CLASS} bg-emerald-600 text-white`}>
                 贏 +
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => confirm(1)} className={`${key} col-span-2 bg-amber-400 text-zinc-950`}>
+            <button type="button" onClick={() => confirm(1)} className={`${KEY_CLASS} col-span-2 bg-amber-400 text-zinc-950`}>
               確定
             </button>
           )}

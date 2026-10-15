@@ -49,8 +49,8 @@ export function suitAvailable(suit: Suit, used: ReadonlySet<Card>, rank: Rank | 
   return rank ? !used.has(makeCard(rank, suit)) : RANKS.some((r) => !used.has(makeCard(r, suit)))
 }
 
-/** `from` 之後的下一個空格；沒有就回傳 null */
-export function nextEmptySlot(slots: readonly Slot[], from: number): number | null {
-  for (let i = from + 1; i < slots.length; i++) if (slots[i] === null) return i
+/** `from` 之後、`until`（含）之前的下一個空格；沒有就回傳 null */
+export function nextEmptySlot(slots: readonly Slot[], from: number, until = slots.length - 1): number | null {
+  for (let i = from + 1; i <= until; i++) if (slots[i] === null) return i
   return null
 }

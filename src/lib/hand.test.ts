@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { blankHand, handSlots, isEmptyHand, withSlot } from './hand'
+import { blankHand, handSlots, isEmptyHand, normalizeHand, withSlot } from './hand'
 
 describe('hand', () => {
   it('空白的一手是空的，★ 不算內容', () => {
@@ -15,6 +15,23 @@ describe('hand', () => {
     expect(isEmptyHand({ ...blankHand('a'), resultBb: 0 })).toBe(false)
     expect(isEmptyHand({ ...blankHand('a'), stackBb: 30 })).toBe(false)
     expect(isEmptyHand({ ...blankHand('a'), note: 'x' })).toBe(false)
+    expect(isEmptyHand({ ...blankHand('a'), actions: [{ seat: 'UTG', type: 'fold', to: null }] })).toBe(false)
+  })
+
+  it('人數、前注不算內容', () => {
+    expect(isEmptyHand(blankHand('a', 0, { tableSize: 6, bbAnte: false }))).toBe(true)
+  })
+
+  it('舊版資料補上人數、前注、行動', () => {
+    const old = { id: 'x', schemaVersion: 1, position: 'BTN', hero: ['As', 'Kd'], createdAt: 5 } as never
+    const h = normalizeHand(old)
+    expect(h.schemaVersion).toBe(2)
+    expect(h.tableSize).toBe(9)
+    expect(h.bbAnte).toBe(true)
+    expect(h.actions).toEqual([])
+    expect(h.position).toBe('BTN')
+    expect(h.hero).toEqual(['As', 'Kd'])
+    expect(h.createdAt).toBe(5)
   })
 
   it('withSlot 寫進正確的格子', () => {
